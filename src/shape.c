@@ -7,6 +7,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define OLIVEC_AA_RES 1
 #define OLIVEC_IMPLEMENTATION
 #include "olive.c"
 
@@ -26,7 +27,7 @@ int main (void)
   oc.stride = WIDTH;
 
   olivec_fill(oc, 0xFF000000);
-  int x1, y1, x2, y2, w, h;
+  int x1, y1, x2, y2, w, h, i = 0;
   do
   {
     x1 = rand()%WIDTH;
@@ -38,7 +39,12 @@ int main (void)
     w = x2 - x1;
     h = y2 - y1;
   }
-  while(w < 4 || h < 4);
+  while((w < 4 || h < 4) && i++ < 100);
+  assert(w >= 4 && h >= 4);
+
+  //render circle within rectangle
+  int r = ( w < h ? w : h)/2;
+  olivec_circle(oc, x1 + w/2, y1 + h/2, r, 0xFFFFFFFF);
   olivec_frame(oc, x1, y1, w, h, 1, 0xFF0000FF);
 
   const char *file_path = "output.png";
