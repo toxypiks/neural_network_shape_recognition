@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 
 #define NN_IMPLEMENTATION
 #include "nn.h"
@@ -14,6 +15,7 @@
 
 int main (void)
 {
+  srand(time(0));
   //256 MB big arena allocator
   Region temp = region_alloc_alloc(256*1024*1024);
 
@@ -24,7 +26,20 @@ int main (void)
   oc.stride = WIDTH;
 
   olivec_fill(oc, 0xFF000000);
-  olivec_circle(oc, WIDTH/2, HEIGHT/2, WIDTH/3, 0xFFFFFFFF);
+  int x1, y1, x2, y2, w, h;
+  do
+  {
+    x1 = rand()%WIDTH;
+    y1 = rand()%HEIGHT;
+    x2 = rand()%WIDTH;
+    y2 = rand()%HEIGHT;
+    if (x1 > x2) OLIVEC_SWAP(int, x1, x2);
+    if (y1 > y2) OLIVEC_SWAP(int, y1, y2);
+    w = x2 - x1;
+    h = y2 - y1;
+  }
+  while(w < 4 || h < 4);
+  olivec_frame(oc, x1, y1, w, h, 1, 0xFF0000FF);
 
   const char *file_path = "output.png";
   if(!stbi_write_png(file_path, WIDTH, HEIGHT, 4, oc.pixels, oc.stride*sizeof(*oc.pixels))) {
