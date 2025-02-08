@@ -76,30 +76,23 @@ void canvas_to_row(Olivec_Canvas oc, Row row)
   }
 }
 
-int main (void)
+Mat generate_samples(Region *r, size_t samples)
 {
-  srand(time(0));
-
-  //256 MB big arena allocator
-  Region temp = region_alloc_alloc(256*1024*1024);
+  size_t input_size = WIDTH*HEIGHT;
+  size_t output_size = SHAPES;
+  // matrix of training data
+  Mat t = mat_alloc(r, samples*SHAPES, input_size + output_size);
+  size_t s = region_save(r);
   Olivec_Canvas oc = {0};
-  //random_circle(oc);
-  oc.pixels = region_alloc(&temp, WIDTH*HEIGHT*sizeof(*oc.pixels));
+  oc.pixels = region_alloc(r, WIDTH*HEIGHT*sizeof(*oc.pixels));
   oc.width = WIDTH;
   oc.height = HEIGHT;
   oc.stride = WIDTH;
-
-  // training data matrix
-  NN nn = nn_alloc(NULL, arch, ARRAY_LEN(arch));
-  nn_rand(nn, -1, 1);
-
-  // rows: 10 samples per shape * 2 shapes, cols = width*height,2
-  Mat t = mat_alloc(NULL, SAMPLES_PER_SHAPE*SHAPES, NN_INPUT(nn).cols + NN_OUTPUT(nn).cols);
-  for (size_t i = 0; i < SAMPLES_PER_SHAPE; ++i) {
+  for (size_t i = 0; i < samples; ++i) {
     for (size_t j = 0; j < SHAPES; ++j) {
       Row row = mat_row(t, i*2 + j); //0, 1, 2, 3, 4, 5..20
-      Row in = row_slice(row, 0, NN_INPUT(nn).cols);
-      Row out = row_slice(row, NN_INPUT(nn).cols, NN_OUTPUT(nn).cols);
+      Row in = row_slice(row, 0, input_size);
+      Row out = row_slice(row, input_size, output_size);
       switch(j) {
       case SHAPE_CIRCLE: random_circle(oc); break;
       case SHAPE_RECT: random_rect(oc); break;
@@ -110,6 +103,22 @@ int main (void)
       ROW_AT(out, j) = 1.0f;
     }
   }
+  region_rewind(r, s);
+  return t;
+}
+
+int main (void)
+{
+  srand(time(0));
+
+  //256 MB big arena allocator
+  Region temp = region_alloc_alloc(256*1024*1024);
+  Region main = region_alloc_alloc(256*1024*1024);
+
+  // training data matrix
+  NN nn = nn_alloc(NULL, arch, ARRAY_LEN(arch));
+  nn_rand(nn, -1, 1);
+  Mat t = generate_samples(&main, SAMPLES_PER_SHAPE);
 
   Gym_Plot plot = {0};
   Batch batch = {0};
