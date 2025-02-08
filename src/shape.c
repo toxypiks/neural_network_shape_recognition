@@ -114,7 +114,12 @@ int main (void)
 
     for (size_t y = 0; y < HEIGHT; ++y) {
       for (size_t x = 0; x < WIDTH; ++x) {
-        printf("%f ", ROW_AT(in, y*WIDTH + x));
+        float bright = ROW_AT(in, y*WIDTH + x);
+        if(bright < 1e-6) {
+          printf(" ");
+        } else {
+          printf("#");
+        }
       }
       printf("\n");
     }
