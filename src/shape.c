@@ -1,15 +1,15 @@
 #include <stdio.h>
 #include <time.h>
 
-#define NN_IMPLEMENTATION
-#include "nn.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
 #define OLIVEC_AA_RES 1
 #define OLIVEC_IMPLEMENTATION
 #include "olive.c"
+
+#define GYM_IMPLEMENTATION
+#include "gym.h"
+
+#define NN_IMPLEMENTATION
+#include "nn.h"
 
 #define WIDTH 28
 #define HEIGHT WIDTH
@@ -25,6 +25,10 @@ enum {
 #define FOREGROUND_COLOR 0xFFFFFFFF
 
 size_t arch[] = {WIDTH*HEIGHT, 14, SHAPES};
+size_t batch_size = 5;
+size_t batches_per_frame = 4;
+float rate = 1.f;
+bool paused = true;
 
 void random_boundary(size_t width, size_t height, int *x1, int *y1, int *w, int *h)
 {
@@ -107,23 +111,33 @@ int main (void)
     }
   }
 
-  for (size_t i = 0; i < t.rows; ++i) {
-    Row row = mat_row(t, i);
-    Row in = row_slice(row, 0, NN_INPUT(nn).cols);
-    Row out = row_slice(row, NN_INPUT(nn).cols, NN_OUTPUT(nn).cols);
+  Gym_Plot plot = {0};
+  Batch batch = {0};
 
-    for (size_t y = 0; y < HEIGHT; ++y) {
-      for (size_t x = 0; x < WIDTH; ++x) {
-        float bright = ROW_AT(in, y*WIDTH + x);
-        if(bright < 1e-6) {
-          printf(" ");
-        } else {
-          printf("#");
-        }
+  int factor = 80;
+  InitWindow(16*factor, 9*factor, "Shape");
+  SetTargetFPS(60);
+
+  while(!WindowShouldClose()) {
+    if (IsKeyPressed(KEY_SPACE)) {
+      paused = !paused;
+    }
+    for (size_t i = 0; i < batches_per_frame && !paused; ++i) {
+      batch_process(&temp, &batch, batch_size, nn, t, rate);
+      if (batch.finished) {
+        da_append(&plot, batch.cost);
+        mat_shuffle_rows(t);
       }
-      printf("\n");
     }
-    MAT_PRINT(row_as_mat(out));
-    }
+    BeginDrawing();
+    ClearBackground(GYM_BACKGROUND);
+    Gym_Rect root = {0};
+    root.w = GetRenderWidth();
+    root.h = GetRenderHeight();
+    gym_plot(plot, root);
+    EndDrawing();
+  }
+  CloseWindow();
+
   return 0;
 }
